@@ -7,6 +7,7 @@ import com.microsoft.azure.documentdb.bulkexecutor.BulkImportResponse;
 import com.microsoft.azure.documentdb.bulkexecutor.BulkUpdateResponse;
 import com.microsoft.azure.documentdb.bulkexecutor.graph.Element.GremlinEdge;
 import com.microsoft.azure.documentdb.bulkexecutor.graph.Element.GremlinVertex;
+import com.microsoft.azure.documentdb.bulkexecutor.graph.Direction;
 import com.microsoft.azure.documentdb.bulkexecutor.graph.GraphBulkExecutor;
 import org.apache.tinkerpop.gremlin.driver.Client;
 import org.apache.tinkerpop.gremlin.driver.Cluster;
@@ -55,7 +56,6 @@ public class Main {
         testBulkUpdate();
         System.out.println();
         System.out.println();
-
     }
 
     private void testGremlin() throws ExecutionException, InterruptedException {
@@ -67,7 +67,7 @@ public class Main {
 
         try {
             // Attempt to create the connection objects
-            cluster = Cluster.build(new File("src/remote.yaml")).create();
+            cluster = Cluster.build(new File("remote.yaml")).create();
             client = cluster.connect();
             runGremlinQuery(client, GREMLIN_QUERIES[0], "Running delete all: ");
             runGremlinQuery(client, GREMLIN_QUERIES[1], "Running ingestion for vertices:");
@@ -93,8 +93,12 @@ public class Main {
 
         try (GraphBulkExecutor executor = graphBulkExecutorBuilder.build()) {
             BulkUpdateResponse updateResponse = executor.updateAll(readEdges("edges.graphson").stream().map((e) -> {
-                e.addProperty("weight", 1.0);
-                return e;
+                GremlinEdge partialEdge = GremlinEdge.builder()
+                        .setEdgeId(e.getId())
+                        .setOutVertexPartitionKey(e.getOutVertexPartitionKey())
+                        .addProperty("weight", 1.0)
+                        .build();
+                return partialEdge;
             }).collect(Collectors.toList()), 20);
 
             System.out.println(String.format("Finished update with RUSs: %s, latency: %s, total items updated: %s, errors: %s",
@@ -121,7 +125,7 @@ public class Main {
         try (GraphBulkExecutor executor = graphBulkExecutorBuilder.build()) {
             if (deleteEdgesOnly) {
                 final String sourceVertexId = "4GC5MFUS3IC6";
-                BulkDeleteResponse response = executor.deleteEdgesByLabel(sourceVertexId, "substitute");
+                BulkDeleteResponse response = executor.deleteEdges(Direction.BOTH, "substitute", sourceVertexId, sourceVertexId,null, null);
 
                 System.out.println(String.format("Finished edges delete on vertex: %s, label: %s ; RUSs: %s, latency: %s, total items: %s, errors: %s",
                         sourceVertexId,
@@ -185,15 +189,18 @@ public class Main {
 
         for (String vertexId: Arrays.asList(vertexIds))
         {
-            GremlinVertex v = new GremlinVertex(vertexId, "product");
-            v.addProperty("product_type", UUID.randomUUID().toString());
-            v.addProperty("color", UUID.randomUUID().toString());
-            v.addProperty("image_url", UUID.randomUUID().toString());
-            v.addProperty("VertexKey", vertexId);
-            v.addProperty("finish", UUID.randomUUID().toString());
-            v.addProperty("name", UUID.randomUUID().toString());
-            v.addProperty("facet_product_type", UUID.randomUUID().toString());
-            v.addProperty("product_name", UUID.randomUUID().toString());
+            GremlinVertex v = GremlinVertex.builder()
+            .setId(vertexId)
+            .setLabel("product")
+            .addProperty("product_type", UUID.randomUUID().toString())
+            .addProperty("color", UUID.randomUUID().toString())
+            .addProperty("image_url", UUID.randomUUID().toString())
+            .addProperty("VertexKey", vertexId)
+            .addProperty("finish", UUID.randomUUID().toString())
+            .addProperty("name", UUID.randomUUID().toString())
+            .addProperty("facet_product_type", UUID.randomUUID().toString())
+            .addProperty("product_name", UUID.randomUUID().toString())
+            .build();
 
             vertices.add(v);
         }
@@ -214,13 +221,15 @@ public class Main {
             while (line != null) {
                 Vertex vertex = graphReader.readVertex(new ByteArrayInputStream(line.getBytes()), (a) -> a.get());
 
-                GremlinVertex batchVertex = new GremlinVertex(vertex.id().toString(), vertex.label());
+                GremlinVertex.Builder builder = GremlinVertex.builder()
+                    .setId(vertex.id().toString())
+                    .setLabel(vertex.label());
 
                 vertex.properties().forEachRemaining((t) -> {
-                    batchVertex.addProperty(t.label(), t.value());
+                    builder.addProperty(t.label(), t.value());
                 });
 
-                batchVertices.add(batchVertex);
+                batchVertices.add(builder.build());
                 line = reader.readLine();
             }
         } catch (IOException e) {
@@ -243,21 +252,21 @@ public class Main {
             while (line != null) {
                 Edge edge = graphReader.readEdge(new ByteArrayInputStream(line.getBytes()), (a) -> a.get());
 
-                GremlinEdge batchEdge = new GremlinEdge(
-                        edge.id().toString(),
-                        edge.label(),
-                        edge.outVertex().id().toString(),
-                        edge.inVertex().id().toString(),
-                        edge.outVertex().label(),
-                        edge.inVertex().label(),
-                        edge.outVertex().id(),
-                        edge.inVertex().id());
+                GremlinEdge.Builder builder = GremlinEdge.builder()
+                        .setEdgeId(edge.id().toString())
+                        .setEdgeLabel(edge.label())
+                        .setOutVertexId(edge.outVertex().id().toString())
+                        .setOutVertexPartitionKey(edge.outVertex().id())
+                        .setOutVertexLabel(edge.outVertex().label())
+                        .setInVertexLabel(edge.inVertex().label())
+                        .setInVertexId(edge.inVertex().id().toString())
+                        .setInVertexPartitionKey(edge.inVertex().id());
 
                 edge.properties().forEachRemaining((t) -> {
-                    batchEdge.addProperty(t.key(), t.value());
+                    builder.addProperty(t.key(), t.value());
                 });
 
-                batchEdges.add(batchEdge);
+                batchEdges.add(builder.build());
                 line = reader.readLine();
             }
         } catch (IOException e) {
