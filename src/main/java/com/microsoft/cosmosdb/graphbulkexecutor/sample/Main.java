@@ -8,7 +8,7 @@ import com.microsoft.azure.documentdb.bulkexecutor.BulkUpdateResponse;
 import com.microsoft.azure.documentdb.bulkexecutor.graph.Element.GremlinEdge;
 import com.microsoft.azure.documentdb.bulkexecutor.graph.Element.GremlinVertex;
 import com.microsoft.azure.documentdb.bulkexecutor.graph.Direction;
-import com.microsoft.azure.documentdb.bulkexecutor.graph.GraphBulkExecutor;
+import com.microsoft.azure.documentdb.bulkexecutor.GraphBulkExecutor;
 import org.apache.tinkerpop.gremlin.driver.Client;
 import org.apache.tinkerpop.gremlin.driver.Cluster;
 import org.apache.tinkerpop.gremlin.driver.Result;
