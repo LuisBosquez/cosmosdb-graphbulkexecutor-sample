@@ -4,8 +4,8 @@
   <artifactId>documentdb-bulkexecutor</artifactId>
   <versioning>
     <versions>
-      <version>2.4.3-SNAPSHOT</version>
+      <version>2.6.2-SNAPSHOT</version>
     </versions>
-    <lastUpdated>20190320202239</lastUpdated>
+    <lastUpdated>20190801202239</lastUpdated>
   </versioning>
 </metadata>

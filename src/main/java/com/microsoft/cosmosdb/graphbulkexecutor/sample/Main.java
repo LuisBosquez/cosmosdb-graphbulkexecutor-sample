@@ -40,10 +40,6 @@ public class Main {
     }
 
     private void run() throws DocumentClientException, ExecutionException, InterruptedException {
-        System.out.println("Testing using gremlin insert queries.... ");
-        testGremlin();
-        System.out.println();
-        System.out.println();
         System.out.println("Testing full insert using bulk executor .... ");
         testBulkExecutor(false);
         System.out.println();
