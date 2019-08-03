@@ -1,7 +1,7 @@
 
 * Clone this repository using `git clone https://github.com/nomiero/cosmosdb-graphbulkexecutor-sample.git`
 
-* Next substitute the endpoint, collection, authorization key in the `Main.java` and `remote.yaml`
+* Next substitute the endpoint, collection, authorization key in the `Main.java`
 
 * To build the command line tool from source (jar can be found in */target* folder):
 `mvn clean package`
